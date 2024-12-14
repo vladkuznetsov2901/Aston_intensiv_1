@@ -57,9 +57,11 @@ class MusicService : Service() {
                 if (isPlaying()) pauseTrack() else resumeTrack()
                 createNotification()
             }
+
             ACTION_NEXT -> {
                 nextTrack()
             }
+
             ACTION_PREVIOUS -> {
                 previousTrack()
             }
@@ -82,7 +84,7 @@ class MusicService : Service() {
     }
 
 
-    fun createNotification(action: String? = null) {
+    fun createNotification() {
         val playPauseIcon = if (isPlaying()) R.drawable.pause_btn_ic else R.drawable.play_btn_ic
         val isPlaying = isPlaying()
         val playPauseIntent = PendingIntent.getService(
@@ -114,9 +116,11 @@ class MusicService : Service() {
             .addAction(R.drawable.prev_btn_ic, "Previous", prevIntent)
             .addAction(playPauseIcon, "Play/Pause", playPauseIntent)
             .addAction(R.drawable.next_btn_ic, "Next", nextIntent)
-            .setStyle(androidx.media.app.NotificationCompat.MediaStyle()
-                .setMediaSession(mediaSession.sessionToken)
-                .setShowActionsInCompactView(0, 1, 2))
+            .setStyle(
+                androidx.media.app.NotificationCompat.MediaStyle()
+                    .setMediaSession(mediaSession.sessionToken)
+                    .setShowActionsInCompactView(0, 1, 2)
+            )
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
 
