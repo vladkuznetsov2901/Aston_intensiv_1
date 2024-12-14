@@ -10,21 +10,32 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.os.Build
 import android.os.IBinder
+import android.widget.ImageView
 import androidx.annotation.RequiresApi
 import com.example.aston_intensiv_1.databinding.ActivityMainBinding
 
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private var musicService: MusicService? = null
     private var isBound = false
     var imgRes = 0
 
+    private var musicService: MusicService? = null
+    private val receiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == MusicService.ACTION_PLAY_PAUSE) {
+                val isPlaying = intent.getBooleanExtra("isPlaying", false)
+                updatePlayPauseIcon(isPlaying)
+            }
+        }
+    }
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -51,6 +62,9 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        val filter = IntentFilter(MusicService.ACTION_PLAY_PAUSE)
+        registerReceiver(receiver, filter)
+
         val sharedPref = getSharedPreferences("MusicPreferences", Context.MODE_PRIVATE)
         imgRes = sharedPref.getInt(IMG_RES_KEY, R.drawable.play_btn_ic)
         binding.playBtn.setImageResource(imgRes)
@@ -59,13 +73,23 @@ class MainActivity : AppCompatActivity() {
         startForegroundService(intent)
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
 
+        if (musicService?.isPlaying() == true) {
+            binding.playBtn.setImageResource(R.drawable.pause_btn_ic)
+
+            imgRes = R.drawable.play_btn_ic
+        } else {
+            binding.playBtn.setImageResource(R.drawable.play_btn_ic)
+            imgRes = R.drawable.pause_btn_ic
+
+        }
+
         binding.playBtn.setOnClickListener {
-            if (musicService?.isPlaying() == true) {
+            if (musicService!!.isPlaying() == true) {
                 musicService!!.pauseTrack()
                 binding.playBtn.setImageResource(R.drawable.play_btn_ic)
                 imgRes = R.drawable.play_btn_ic
             } else {
-                musicService?.resumeTrack()
+                musicService!!.resumeTrack()
                 binding.playBtn.setImageResource(R.drawable.pause_btn_ic)
                 imgRes = R.drawable.pause_btn_ic
 
@@ -92,6 +116,11 @@ class MainActivity : AppCompatActivity() {
         }
         super.onDestroy()
 
+    }
+
+    private fun updatePlayPauseIcon(isPlaying: Boolean) {
+        val iconRes = if (isPlaying) R.drawable.pause_btn_ic else R.drawable.play_btn_ic
+        binding.playBtn.setImageResource(iconRes)
     }
 
 
