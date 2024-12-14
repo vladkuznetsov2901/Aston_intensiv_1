@@ -28,43 +28,105 @@ class MusicService : Service() {
 
 
     companion object {
-        const val CHANNEL_ID = "MusicServiceChannel"
+        const val ACTION_PLAY_PAUSE = "action_play_pause"
+        const val ACTION_NEXT = "action_next"
+        const val ACTION_PREVIOUS = "action_previous"
         const val NOTIFICATION_ID = 1
+        const val CHANNEL_ID = "MusicNotification"
     }
+
 
     override fun onCreate() {
         super.onCreate()
+
+        mediaSession = MediaSessionCompat(this, "MusicService").apply {
+            isActive = true
+        }
+
+        createNotificationChannel()
+        mediaSession = MediaSessionCompat(this, "MusicService")
+
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        createNotificationChannel()
+        val action = intent?.action
+        createNotification()
 
-        val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE
-        )
+        when (action) {
+            ACTION_PLAY_PAUSE -> {
+                if (isPlaying()) pauseTrack() else resumeTrack()
+                createNotification()
+            }
 
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Music Player")
-            .setContentText("Playing music...")
-            .setSmallIcon(R.drawable.play_btn_ic)
-            .setContentIntent(pendingIntent)
-            .build()
+            ACTION_NEXT -> {
+                nextTrack()
+            }
 
-        startForeground(NOTIFICATION_ID, notification)
+            ACTION_PREVIOUS -> {
+                previousTrack()
+            }
+        }
 
         return START_STICKY
     }
 
+
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Music Service Channel",
-            NotificationManager.IMPORTANCE_LOW
-        )
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Music Player Channel",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
     }
+
+
+    fun createNotification() {
+        val playPauseIcon = if (isPlaying()) R.drawable.pause_btn_ic else R.drawable.play_btn_ic
+        val isPlaying = isPlaying()
+        val playPauseIntent = PendingIntent.getService(
+            this, 0,
+            Intent(this, MusicService::class.java).setAction(ACTION_PLAY_PAUSE),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val nextIntent = PendingIntent.getService(
+            this, 0,
+            Intent(this, MusicService::class.java).setAction(ACTION_NEXT),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val prevIntent = PendingIntent.getService(
+            this, 0,
+            Intent(this, MusicService::class.java).setAction(ACTION_PREVIOUS),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val broadcastIntent = Intent(ACTION_PLAY_PAUSE)
+        broadcastIntent.putExtra("isPlaying", isPlaying)
+        sendBroadcast(broadcastIntent)
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Music Player")
+            .setContentText("Playing your favorite music")
+            .setSmallIcon(R.drawable.play_btn_ic)
+            .addAction(R.drawable.prev_btn_ic, "Previous", prevIntent)
+            .addAction(playPauseIcon, "Play/Pause", playPauseIntent)
+            .addAction(R.drawable.next_btn_ic, "Next", nextIntent)
+            .setStyle(
+                androidx.media.app.NotificationCompat.MediaStyle()
+                    .setMediaSession(mediaSession.sessionToken)
+                    .setShowActionsInCompactView(0, 1, 2)
+            )
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
+        startForeground(NOTIFICATION_ID, notification)
+    }
+
 
     override fun onDestroy() {
         mPlayer?.release()
@@ -90,11 +152,13 @@ class MusicService : Service() {
             }
             mPlayer?.start()
         }
+        createNotification()
     }
 
     fun pauseTrack() {
 
         mPlayer?.pause()
+        createNotification()
     }
 
     fun resumeTrack() {
