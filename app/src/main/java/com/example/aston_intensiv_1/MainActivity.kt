@@ -92,6 +92,8 @@ class MainActivity : AppCompatActivity() {
                 musicService!!.resumeTrack()
                 binding.playBtn.setImageResource(R.drawable.pause_btn_ic)
                 imgRes = R.drawable.pause_btn_ic
+
+
             }
         }
 
