@@ -124,27 +124,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    fun checkPermission() {
-        val res = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO)
 
-        if (res != PackageManager.PERMISSION_GRANTED) {
-            requestPermission()
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    fun requestPermission() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.READ_MEDIA_AUDIO),
-                1
-            )
-
-        }
-
-    }
 
 
 }
